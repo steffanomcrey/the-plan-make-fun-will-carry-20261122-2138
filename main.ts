@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const LIMIT = 280;
@@ -28,7 +28,20 @@ function main(): void {
   const outDir = process.env.OUTPUT_DIR ?? "/output";
   mkdirSync(outDir, { recursive: true });
   const target = join(outDir, "entry.txt");
-  writeFileSync(target, plan, "utf8");
+  const tmpTarget = `${target}.tmp`;
+  writeFileSync(tmpTarget, plan, "utf8");
+  renameSync(tmpTarget, target);
+  const written = readFileSync(target, "utf8");
+  if (written !== plan) {
+    throw new Error("verification failed: entry.txt content differs from plan");
+  }
+  const writtenSize = codePointCount(written);
+  if (writtenSize < 1 || writtenSize > LIMIT) {
+    throw new Error(
+      `verification failed: entry.txt must be 1 to ${LIMIT} code points, got ${writtenSize}`,
+    );
+  }
+  console.log(`verified ${writtenSize} code points in ${target}`);
   console.log(`wrote ${codePointCount(plan)} code points to ${target}`);
 }
 
